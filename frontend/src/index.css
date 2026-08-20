@@ -1,0 +1,723 @@
+/* ==========================================================================
+   LEDGER — design tokens
+   A quiet, confident operations console. Paper-and-ink palette with a single
+   deep-green brand color; tabular mono type for every number, prices, SKUs
+   and stock counts read like a till receipt. Status uses rubber-stamp badges
+   and a dashed "perforation" rule echoes receipt paper at section breaks.
+   ========================================================================== */
+
+:root {
+  --paper: #f5f6f4;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --ink: #14181b;
+  --ink-soft: #57645d;
+  --ink-faint: #8b968f;
+  --line: #dfe4de;
+  --line-strong: #c7cec7;
+
+  --brand: #1f5d3a;
+  --brand-ink: #0e2a1c;
+  --brand-tint: #e7f0ea;
+  --brand-tint-strong: #cfe3d6;
+
+  --alert: #b23a2f;
+  --alert-tint: #f7e6e3;
+  --caution: #a06a1f;
+  --caution-tint: #f4ead4;
+
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --shadow-card: 0 1px 2px rgba(14, 42, 28, 0.06), 0 1px 1px rgba(14, 42, 28, 0.04);
+  --shadow-raised: 0 8px 24px rgba(14, 42, 28, 0.10);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--brand-ink);
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: var(--font-body);
+}
+
+/* Anything numeric — money, SKUs, quantities, dates — uses tabular mono */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   App shell
+   -------------------------------------------------------------------------- */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--brand-ink);
+  color: #dce8e0;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 12px 24px;
+  color: #fff;
+}
+
+.sidebar-brand .mark {
+  width: 10px;
+  height: 10px;
+  background: #7fd9a8;
+  border-radius: 2px;
+  flex: none;
+}
+
+.sidebar-brand span {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.sidebar-section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7c9188;
+  padding: 16px 12px 6px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  color: #cfe0d7;
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.nav-item .idx {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #6d8579;
+  width: 16px;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.nav-item.active {
+  background: #ffffff;
+  color: var(--brand-ink);
+}
+
+.nav-item.active .idx {
+  color: var(--brand);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  color: #7c9188;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 32px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.topbar h1 {
+  font-size: 20px;
+}
+
+.topbar-meta {
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.user-chip .avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.user-chip .role {
+  font-size: 11px;
+  color: var(--ink-faint);
+  text-transform: capitalize;
+}
+
+.content {
+  padding: 28px 32px 48px;
+  flex: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Perforation divider — the signature element. A dashed rule with punched
+   "holes" either side, like the tear-line on a receipt.
+   -------------------------------------------------------------------------- */
+
+.perforation {
+  position: relative;
+  border: none;
+  border-top: 1.5px dashed var(--line-strong);
+  margin: 28px 0;
+}
+
+.perforation::before,
+.perforation::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1.5px solid var(--line-strong);
+}
+
+.perforation::before {
+  left: -32px;
+}
+
+.perforation::after {
+  right: -32px;
+}
+
+/* --------------------------------------------------------------------------
+   Cards / KPI stats
+   -------------------------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.card-pad {
+  padding: 20px 22px;
+}
+
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.stat-card .label {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stat-card .value {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--brand-ink);
+  margin-top: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-card .delta {
+  margin-top: 6px;
+  font-size: 12px;
+  font-family: var(--font-mono);
+}
+
+.delta.up {
+  color: var(--brand);
+}
+
+.delta.down {
+  color: var(--alert);
+}
+
+/* --------------------------------------------------------------------------
+   Badges — rubber-stamp styling for status
+   -------------------------------------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+}
+
+.badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badge.ok {
+  background: var(--brand-tint);
+  color: var(--brand);
+  border-color: var(--brand-tint-strong);
+}
+
+.badge.low {
+  background: var(--caution-tint);
+  color: var(--caution);
+  border-color: #e8d3a4;
+}
+
+.badge.out {
+  background: var(--alert-tint);
+  color: var(--alert);
+  border-color: #e6c2bc;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+
+.btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.12s ease;
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--brand-ink);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.btn-secondary:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   Tables
+   -------------------------------------------------------------------------- */
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.data-table thead th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  font-weight: 600;
+  padding: 0 14px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.data-table tbody td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background: var(--brand-tint);
+}
+
+.data-table .cell-muted {
+  color: var(--ink-faint);
+}
+
+/* --------------------------------------------------------------------------
+   Forms
+   -------------------------------------------------------------------------- */
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: var(--font-body);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.field input:focus,
+.field select:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+  border-color: var(--brand);
+}
+
+.field input.num,
+.field select.num {
+  font-family: var(--font-mono);
+}
+
+/* --------------------------------------------------------------------------
+   Login page
+   -------------------------------------------------------------------------- */
+
+.login-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--brand-ink);
+  background-image: radial-gradient(circle at 20% 20%, rgba(127, 217, 168, 0.08), transparent 45%),
+    radial-gradient(circle at 80% 70%, rgba(127, 217, 168, 0.06), transparent 40%);
+}
+
+.login-card {
+  width: 380px;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+  padding: 34px 32px 28px;
+}
+
+.login-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.login-mark .mark {
+  width: 11px;
+  height: 11px;
+  background: var(--brand);
+  border-radius: 2px;
+}
+
+.login-mark span {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+  color: var(--brand-ink);
+}
+
+.login-sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+}
+
+.login-error {
+  background: var(--alert-tint);
+  color: var(--alert);
+  border: 1px solid #e6c2bc;
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 12.5px;
+  margin-bottom: 16px;
+}
+
+/* --------------------------------------------------------------------------
+   POS checkout
+   -------------------------------------------------------------------------- */
+
+.pos-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+.pos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.pos-item {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, transform 0.08s ease;
+}
+
+.pos-item:hover {
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
+
+.pos-item .name {
+  font-weight: 600;
+  font-size: 13.5px;
+  margin-bottom: 4px;
+}
+
+.pos-item .sku {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.pos-item .price {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--brand);
+  margin-top: 8px;
+}
+
+.ticket {
+  position: sticky;
+  top: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.ticket-head {
+  padding: 16px 18px;
+  border-bottom: 1.5px dashed var(--line-strong);
+}
+
+.ticket-head .eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.ticket-lines {
+  padding: 8px 18px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.ticket-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 13px;
+}
+
+.ticket-line:last-child {
+  border-bottom: none;
+}
+
+.ticket-total {
+  padding: 16px 18px;
+  border-top: 1.5px dashed var(--line-strong);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.ticket-total .label {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.ticket-total .value {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--brand-ink);
+}
+
+.ticket-actions {
+  padding: 14px 18px 18px;
+}
+
+.empty-ticket {
+  padding: 32px 18px;
+  text-align: center;
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   Utility
+   -------------------------------------------------------------------------- */
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-head h2 {
+  font-size: 16px;
+}
+
+.section-head .eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

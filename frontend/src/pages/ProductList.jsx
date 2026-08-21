@@ -19,6 +19,7 @@ export default function ProductList() {
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState([]);
   const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("");
 
   const [showProductForm, setShowProductForm] = useState(false);
   const [showStockForm, setShowStockForm] = useState(false);
@@ -40,33 +41,58 @@ export default function ProductList() {
     quantity: "",
   });
 
+  async function loadBranches() {
+    const branchData = await listBranches();
+    const loadedBranches = branchData.results || [];
+
+    setBranches(loadedBranches);
+
+    if (!selectedBranch && loadedBranches.length > 0) {
+      const activeBranch =
+        loadedBranches.find((branch) => branch.is_active) ||
+        loadedBranches[0];
+
+      setSelectedBranch(String(activeBranch.id));
+
+      setStockForm((current) => ({
+        ...current,
+        branch: String(activeBranch.id),
+      }));
+
+      return activeBranch.id;
+    }
+
+    return selectedBranch ? Number(selectedBranch) : null;
+  }
+
+  async function loadProducts(branchId) {
+    if (!branchId) {
+      setProducts([]);
+      return;
+    }
+
+    const productData = await listProducts({
+      branch_id: branchId,
+    });
+
+    setProducts(productData.results || []);
+  }
+
   async function loadData() {
     try {
       setLoading(true);
       setError("");
 
-      const branchData = await listBranches();
-      const loadedBranches = branchData.results || [];
+      const branchId = await loadBranches();
 
-      setBranches(loadedBranches);
-
-      const activeBranch = loadedBranches.find(
-        (branch) => branch.is_active
-      );
-
-      if (!activeBranch) {
+      if (branchId) {
+        await loadProducts(branchId);
+      } else {
         setProducts([]);
-        setError("No active branch is available.");
-        return;
       }
-
-      const productData = await listProducts({
-        branch_id: activeBranch.id,
-      });
-
-      setProducts(productData.results || []);
     } catch (err) {
       console.error(err);
+
       setError(
         err.response?.data
           ? JSON.stringify(err.response.data)
@@ -80,6 +106,24 @@ export default function ProductList() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!selectedBranch) return;
+
+    loadProducts(Number(selectedBranch)).catch((err) => {
+      console.error(err);
+      setError(
+        err.response?.data
+          ? JSON.stringify(err.response.data)
+          : "Could not load products for this branch."
+      );
+    });
+
+    setStockForm((current) => ({
+      ...current,
+      branch: selectedBranch,
+    }));
+  }, [selectedBranch]);
 
   async function handleCreateProduct(e) {
     e.preventDefault();
@@ -105,7 +149,7 @@ export default function ProductList() {
 
       setShowProductForm(false);
 
-      await loadData();
+      await loadProducts(Number(selectedBranch));
     } catch (err) {
       console.error(err);
 
@@ -126,21 +170,28 @@ export default function ProductList() {
       setSaving(true);
       setError("");
 
-      await restock(
-        Number(stockForm.product),
-        Number(stockForm.branch),
-        Number(stockForm.quantity)
-      );
+      const productId = Number(stockForm.product);
+      const branchId = Number(stockForm.branch);
+      const quantity = Number(stockForm.quantity);
+
+      if (!productId || !branchId || !quantity || quantity < 1) {
+        setError("Please select a product, branch, and valid quantity.");
+        return;
+      }
+
+      await restock(productId, branchId, quantity);
 
       setStockForm({
         product: "",
-        branch: "",
+        branch: String(branchId),
         quantity: "",
       });
 
       setShowStockForm(false);
 
-      await loadData();
+      if (String(branchId) === String(selectedBranch)) {
+        await loadProducts(branchId);
+      }
     } catch (err) {
       console.error(err);
 
@@ -171,7 +222,34 @@ export default function ProductList() {
             <h2>All products</h2>
           </div>
 
-          <div style={{ display: "flex", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <select
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              style={{
+                padding: "9px 12px",
+                border: "1px solid var(--line-strong)",
+                borderRadius: 6,
+                fontSize: 13,
+                minWidth: 180,
+              }}
+            >
+              <option value="">Select branch</option>
+
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+
             <input
               className="num"
               style={{
@@ -203,7 +281,13 @@ export default function ProductList() {
                 setError("");
                 setShowStockForm(true);
                 setShowProductForm(false);
+
+                setStockForm((current) => ({
+                  ...current,
+                  branch: selectedBranch,
+                }));
               }}
+              disabled={!selectedBranch}
             >
               + Add stock
             </button>
@@ -340,7 +424,7 @@ export default function ProductList() {
 
                 {products.map((product) => (
                   <option key={product.id} value={product.id}>
-                    {product.sku} — {product.name}
+                    {product.sku} - {product.name}
                   </option>
                 ))}
               </select>
@@ -433,7 +517,7 @@ export default function ProductList() {
                     </td>
 
                     <td className="cell-muted">
-                      {p.category || "—"}
+                      {p.category || "-"}
                     </td>
 
                     <td className="num">
@@ -465,7 +549,7 @@ export default function ProductList() {
                         color: "var(--ink-faint)",
                       }}
                     >
-                      No products found.
+                      No products found for this branch.
                     </td>
                   </tr>
                 )}

@@ -5,6 +5,8 @@ User = get_user_model()
 
 
 class UserSerializer(serializers.ModelSerializer):
+    branch = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -17,6 +19,17 @@ class UserSerializer(serializers.ModelSerializer):
             "branch",
             "is_active",
         ]
+
+    def get_branch(self, obj):
+        if not obj.branch:
+            return None
+
+        return {
+            "id": obj.branch.id,
+            "name": obj.branch.name,
+            "address": obj.branch.address,
+            "is_active": obj.branch.is_active,
+        }
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

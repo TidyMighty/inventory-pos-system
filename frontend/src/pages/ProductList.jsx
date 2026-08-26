@@ -1,13 +1,14 @@
-
 import React, { useEffect, useState } from "react";
 import Topbar from "../components/Topbar";
 import { StockBadge } from "../components/StatCard";
+
 import {
   listProducts,
   createProduct,
   listBranches,
-  restock,
 } from "../api/products";
+
+import { receiveStock } from "../api/inventory";
 
 function statusFor(qty, threshold) {
   if (qty === 0) return "out";
@@ -41,6 +42,10 @@ export default function ProductList() {
     quantity: "",
   });
 
+  // ============================================================
+  // LOAD BRANCHES
+  // ============================================================
+
   async function loadBranches() {
     const branchData = await listBranches();
     const loadedBranches = branchData.results || [];
@@ -52,11 +57,13 @@ export default function ProductList() {
         loadedBranches.find((branch) => branch.is_active) ||
         loadedBranches[0];
 
-      setSelectedBranch(String(activeBranch.id));
+      const branchId = String(activeBranch.id);
+
+      setSelectedBranch(branchId);
 
       setStockForm((current) => ({
         ...current,
-        branch: String(activeBranch.id),
+        branch: branchId,
       }));
 
       return activeBranch.id;
@@ -64,6 +71,10 @@ export default function ProductList() {
 
     return selectedBranch ? Number(selectedBranch) : null;
   }
+
+  // ============================================================
+  // LOAD PRODUCTS
+  // ============================================================
 
   async function loadProducts(branchId) {
     if (!branchId) {
@@ -78,6 +89,10 @@ export default function ProductList() {
     setProducts(productData.results || []);
   }
 
+  // ============================================================
+  // LOAD PAGE DATA
+  // ============================================================
+
   async function loadData() {
     try {
       setLoading(true);
@@ -91,7 +106,7 @@ export default function ProductList() {
         setProducts([]);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Product page load error:", err);
 
       setError(
         err.response?.data
@@ -107,11 +122,16 @@ export default function ProductList() {
     loadData();
   }, []);
 
+  // ============================================================
+  // CHANGE BRANCH
+  // ============================================================
+
   useEffect(() => {
     if (!selectedBranch) return;
 
     loadProducts(Number(selectedBranch)).catch((err) => {
-      console.error(err);
+      console.error("Branch product load error:", err);
+
       setError(
         err.response?.data
           ? JSON.stringify(err.response.data)
@@ -122,8 +142,13 @@ export default function ProductList() {
     setStockForm((current) => ({
       ...current,
       branch: selectedBranch,
+      product: "",
     }));
   }, [selectedBranch]);
+
+  // ============================================================
+  // CREATE PRODUCT
+  // ============================================================
 
   async function handleCreateProduct(e) {
     e.preventDefault();
@@ -151,7 +176,7 @@ export default function ProductList() {
 
       await loadProducts(Number(selectedBranch));
     } catch (err) {
-      console.error(err);
+      console.error("Create product error:", err);
 
       setError(
         err.response?.data
@@ -163,23 +188,36 @@ export default function ProductList() {
     }
   }
 
+  // ============================================================
+  // RECEIVE / ADD STOCK
+  // ============================================================
+
   async function handleRestock(e) {
     e.preventDefault();
 
+    setError("");
+
+    const productId = Number(stockForm.product);
+    const branchId = Number(stockForm.branch);
+    const quantity = Number(stockForm.quantity);
+
+    if (!productId || !branchId || !quantity || quantity < 1) {
+      setError(
+        "Please select a product, branch, and valid quantity."
+      );
+      return;
+    }
+
     try {
       setSaving(true);
-      setError("");
 
-      const productId = Number(stockForm.product);
-      const branchId = Number(stockForm.branch);
-      const quantity = Number(stockForm.quantity);
-
-      if (!productId || !branchId || !quantity || quantity < 1) {
-        setError("Please select a product, branch, and valid quantity.");
-        return;
-      }
-
-      await restock(productId, branchId, quantity);
+      // Uses the same working inventory receipt endpoint
+      // used by the Inventory -> Receive Stock page.
+      await receiveStock({
+        product: productId,
+        branch: branchId,
+        quantity: quantity,
+      });
 
       setStockForm({
         product: "",
@@ -189,11 +227,12 @@ export default function ProductList() {
 
       setShowStockForm(false);
 
+      // Refresh products so the new stock quantity appears.
       if (String(branchId) === String(selectedBranch)) {
         await loadProducts(branchId);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Receive stock error:", err);
 
       setError(
         err.response?.data
@@ -205,20 +244,37 @@ export default function ProductList() {
     }
   }
 
-  const filtered = products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(query.toLowerCase()) ||
-      p.sku.toLowerCase().includes(query.toLowerCase())
-  );
+  // ============================================================
+  // SEARCH / FILTER
+  // ============================================================
+
+  const filtered = products.filter((p) => {
+    const name = String(p.name || "").toLowerCase();
+    const sku = String(p.sku || "").toLowerCase();
+    const search = query.toLowerCase();
+
+    return name.includes(search) || sku.includes(search);
+  });
+
+  // ============================================================
+  // PAGE
+  // ============================================================
 
   return (
     <>
       <Topbar eyebrow="Catalogue" title="Products" />
 
       <div className="content">
+        {/* ======================================================
+            HEADER
+        ====================================================== */}
+
         <div className="section-head">
           <div>
-            <div className="eyebrow">{filtered.length} items</div>
+            <div className="eyebrow">
+              {filtered.length} items
+            </div>
+
             <h2>All products</h2>
           </div>
 
@@ -230,9 +286,13 @@ export default function ProductList() {
               flexWrap: "wrap",
             }}
           >
+            {/* BRANCH SELECTOR */}
+
             <select
               value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
+              onChange={(e) =>
+                setSelectedBranch(e.target.value)
+              }
               style={{
                 padding: "9px 12px",
                 border: "1px solid var(--line-strong)",
@@ -244,11 +304,16 @@ export default function ProductList() {
               <option value="">Select branch</option>
 
               {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
+                <option
+                  key={branch.id}
+                  value={branch.id}
+                >
                   {branch.name}
                 </option>
               ))}
             </select>
+
+            {/* SEARCH */}
 
             <input
               className="num"
@@ -264,6 +329,8 @@ export default function ProductList() {
               onChange={(e) => setQuery(e.target.value)}
             />
 
+            {/* NEW PRODUCT */}
+
             <button
               className="btn btn-primary"
               onClick={() => {
@@ -274,6 +341,8 @@ export default function ProductList() {
             >
               + New product
             </button>
+
+            {/* ADD STOCK */}
 
             <button
               className="btn"
@@ -294,6 +363,10 @@ export default function ProductList() {
           </div>
         </div>
 
+        {/* ======================================================
+            ERROR MESSAGE
+        ====================================================== */}
+
         {error && (
           <div
             style={{
@@ -309,15 +382,28 @@ export default function ProductList() {
           </div>
         )}
 
+        {/* ======================================================
+            CREATE PRODUCT FORM
+        ====================================================== */}
+
         {showProductForm && (
-          <div className="card" style={{ marginBottom: 20, padding: 20 }}>
-            <h3 style={{ marginTop: 0 }}>Create a product</h3>
+          <div
+            className="card"
+            style={{
+              marginBottom: 20,
+              padding: 20,
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              Create a product
+            </h3>
 
             <form
               onSubmit={handleCreateProduct}
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
+                gridTemplateColumns:
+                  "repeat(4, 1fr)",
                 gap: 12,
               }}
             >
@@ -383,13 +469,17 @@ export default function ProductList() {
                   type="submit"
                   disabled={saving}
                 >
-                  {saving ? "Creating..." : "Create product"}
+                  {saving
+                    ? "Creating..."
+                    : "Create product"}
                 </button>
 
                 <button
                   className="btn"
                   type="button"
-                  onClick={() => setShowProductForm(false)}
+                  onClick={() =>
+                    setShowProductForm(false)
+                  }
                 >
                   Cancel
                 </button>
@@ -398,18 +488,33 @@ export default function ProductList() {
           </div>
         )}
 
+        {/* ======================================================
+            ADD STOCK FORM
+        ====================================================== */}
+
         {showStockForm && (
-          <div className="card" style={{ marginBottom: 20, padding: 20 }}>
-            <h3 style={{ marginTop: 0 }}>Add stock</h3>
+          <div
+            className="card"
+            style={{
+              marginBottom: 20,
+              padding: 20,
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              Add stock
+            </h3>
 
             <form
               onSubmit={handleRestock}
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
+                gridTemplateColumns:
+                  "repeat(3, 1fr)",
                 gap: 12,
               }}
             >
+              {/* PRODUCT */}
+
               <select
                 required
                 value={stockForm.product}
@@ -420,14 +525,21 @@ export default function ProductList() {
                   })
                 }
               >
-                <option value="">Select product</option>
+                <option value="">
+                  Select product
+                </option>
 
                 {products.map((product) => (
-                  <option key={product.id} value={product.id}>
+                  <option
+                    key={product.id}
+                    value={product.id}
+                  >
                     {product.sku} - {product.name}
                   </option>
                 ))}
               </select>
+
+              {/* BRANCH */}
 
               <select
                 required
@@ -439,14 +551,21 @@ export default function ProductList() {
                   })
                 }
               >
-                <option value="">Select branch</option>
+                <option value="">
+                  Select branch
+                </option>
 
                 {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
+                  <option
+                    key={branch.id}
+                    value={branch.id}
+                  >
                     {branch.name}
                   </option>
                 ))}
               </select>
+
+              {/* QUANTITY */}
 
               <input
                 required
@@ -462,6 +581,8 @@ export default function ProductList() {
                 }
               />
 
+              {/* BUTTONS */}
+
               <div
                 style={{
                   gridColumn: "1 / -1",
@@ -474,13 +595,17 @@ export default function ProductList() {
                   type="submit"
                   disabled={saving}
                 >
-                  {saving ? "Adding..." : "Add stock"}
+                  {saving
+                    ? "Adding..."
+                    : "Add stock"}
                 </button>
 
                 <button
                   className="btn"
                   type="button"
-                  onClick={() => setShowStockForm(false)}
+                  onClick={() =>
+                    setShowStockForm(false)
+                  }
                 >
                   Cancel
                 </button>
@@ -489,9 +614,18 @@ export default function ProductList() {
           </div>
         )}
 
+        {/* ======================================================
+            PRODUCTS TABLE
+        ====================================================== */}
+
         <div className="card">
           {loading ? (
-            <div style={{ padding: 30, textAlign: "center" }}>
+            <div
+              style={{
+                padding: 30,
+                textAlign: "center",
+              }}
+            >
               Loading products...
             </div>
           ) : (
@@ -510,9 +644,15 @@ export default function ProductList() {
               <tbody>
                 {filtered.map((p) => (
                   <tr key={p.id}>
-                    <td className="num cell-muted">{p.sku}</td>
+                    <td className="num cell-muted">
+                      {p.sku}
+                    </td>
 
-                    <td style={{ fontWeight: 500 }}>
+                    <td
+                      style={{
+                        fontWeight: 500,
+                      }}
+                    >
                       {p.name}
                     </td>
 
@@ -546,10 +686,12 @@ export default function ProductList() {
                       style={{
                         textAlign: "center",
                         padding: "28px 0",
-                        color: "var(--ink-faint)",
+                        color:
+                          "var(--ink-faint)",
                       }}
                     >
-                      No products found for this branch.
+                      No products found for this
+                      branch.
                     </td>
                   </tr>
                 )}
